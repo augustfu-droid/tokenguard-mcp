@@ -4,8 +4,8 @@
   "description": "Zero-dependency AI coding token budgeter, smart repo context packer, secret guard, and MCP server for Claude Code, Cursor, and Windsurf.",
   "type": "module",
   "bin": {
-    "tokenguard": "./bin/tokenguard.js",
-    "tokenguard-mcp": "./bin/tokenguard.js"
+    "tokenguard": "bin/tokenguard.js",
+    "tokenguard-mcp": "bin/tokenguard.js"
   },
   "exports": {
     ".": "./src/index.js"
@@ -35,7 +35,7 @@
   "homepage": "https://augustfu-droid.github.io/tokenguard-mcp/",
   "repository": {
     "type": "git",
-    "url": "https://github.com/augustfu-droid/tokenguard-mcp.git"
+    "url": "git+https://github.com/augustfu-droid/tokenguard-mcp.git"
   },
   "bugs": {
     "url": "https://github.com/augustfu-droid/tokenguard-mcp/issues"
