@@ -6,7 +6,8 @@ import path from 'node:path';
 export const DEFAULT_CHECKOUT_URL = process.env.TOKENGUARD_CHECKOUT_URL
   || 'https://augustfu-droid.github.io/tokenguard-mcp/';
 
-export const DEFAULT_LICENSE_API = process.env.TOKENGUARD_LICENSE_API || '';
+export const DEFAULT_LICENSE_API = process.env.TOKENGUARD_LICENSE_API
+  || 'https://creem-license-proxy.kestrel-devtools.workers.dev';
 
 const OFFLINE_GRACE_MS = 7 * 24 * 60 * 60 * 1000; // 7 days
 
