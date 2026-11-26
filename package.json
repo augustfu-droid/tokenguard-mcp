@@ -1,6 +1,6 @@
 {
   "name": "tokenguard-mcp",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "Zero-dependency AI coding token budgeter, smart repo context packer, secret guard, and MCP server for Claude Code, Cursor, and Windsurf.",
   "type": "module",
   "bin": {

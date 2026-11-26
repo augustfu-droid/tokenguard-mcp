@@ -1,5 +1,6 @@
 import assert from 'node:assert/strict';
 import { execFileSync, spawn } from 'node:child_process';
+import crypto from 'node:crypto';
 import fs from 'node:fs/promises';
 import http from 'node:http';
 import os from 'node:os';
@@ -8,7 +9,13 @@ import test from 'node:test';
 import { fileURLToPath } from 'node:url';
 import { auditSpendLogs } from '../src/audit.js';
 import { checkRepoGuard, formatCheckAsSarif } from '../src/guard.js';
-import { activateLicense, deactivateLicense, getLicenseStatus } from '../src/license.js';
+import {
+  activateLicense,
+  deactivateLicense,
+  getLicenseStatus,
+  issueOfflineSignedToken,
+  verifyOfflineSignedToken,
+} from '../src/license.js';
 import { handleMcpRequest } from '../src/mcp.js';
 import { compressToSkeleton, packRepoContext } from '../src/packer.js';
 import { estimateCostUsd, estimateTokens } from '../src/pricing.js';
@@ -226,5 +233,99 @@ test('MCP JSON-RPC 2.0 handler and live stdio subprocess work end-to-end', async
     assert.ok(toolPayload.costs.length >= 5);
   } finally {
     await fs.rm(dir, { recursive: true, force: true });
+  }
+});
+
+test('Zero-proxy license backends: Offline Ed25519 TG1, Polar.sh, Payhip, and Gumroad work cleanly', async () => {
+  const homeDir = await fs.mkdtemp(path.join(os.tmpdir(), 'tokenguard-zero-proxy-'));
+  const prevHome = process.env.TOKENGUARD_HOME;
+  process.env.TOKENGUARD_HOME = homeDir;
+
+  const { publicKey, privateKey } = crypto.generateKeyPairSync('ed25519', {
+    publicKeyEncoding: { type: 'spki', format: 'pem' },
+    privateKeyEncoding: { type: 'pkcs8', format: 'pem' },
+  });
+
+  const server = http.createServer((req, res) => {
+    let body = '';
+    req.on('data', (c) => { body += c; });
+    req.on('end', () => {
+      res.writeHead(200, { 'content-type': 'application/json' });
+      if (req.url === '/v1/customer-portal/license-keys/activate') {
+        const parsed = JSON.parse(body || '{}');
+        if (parsed.organization_id === 'org_polar_123' && parsed.key === 'POLAR-KEY-1') {
+          res.end(JSON.stringify({ id: 'act_polar_1', license_key: { status: 'granted', expires_at: null } }));
+          return;
+        }
+      }
+      if (req.url === '/v1/customer-portal/license-keys/validate') {
+        const parsed = JSON.parse(body || '{}');
+        if (parsed.key === 'POLAR-KEY-1' && parsed.activation_id === 'act_polar_1') {
+          res.end(JSON.stringify({ id: 'act_polar_1', license_key: { status: 'granted' } }));
+          return;
+        }
+      }
+      if (req.url.startsWith('/api/v2/license/verify') && req.headers['product-secret-key'] === 'payhip_sec_123') {
+        res.end(JSON.stringify({ data: { enabled: true, license_key: 'PAYHIP-KEY-1' } }));
+        return;
+      }
+      if (req.url === '/v2/licenses/verify') {
+        const params = new URLSearchParams(body);
+        if (params.get('product_id') === 'gum_prod_1' && params.get('license_key') === 'GUM-VALID') {
+          res.end(JSON.stringify({ success: true, uses: 1, purchase: { refunded: false, chargebacked: false } }));
+          return;
+        }
+        if (params.get('license_key') === 'GUM-REFUNDED') {
+          res.end(JSON.stringify({ success: true, uses: 1, purchase: { refunded: true, chargebacked: false } }));
+          return;
+        }
+      }
+      res.writeHead(400, { 'content-type': 'application/json' });
+      res.end(JSON.stringify({ error: 'Invalid license' }));
+    });
+  });
+
+  await new Promise((r) => server.listen(0, '127.0.0.1', r));
+  const mockBase = `http://127.0.0.1:${server.address().port}`;
+
+  try {
+    // 1. Offline Ed25519 TG1 token (zero network calls)
+    const token = issueOfflineSignedToken({ id: 'ord_001', tier: 'pro', exp: '2099-01-01T00:00:00Z' }, privateKey);
+    assert.equal(verifyOfflineSignedToken(token, publicKey).valid, true);
+    assert.equal(verifyOfflineSignedToken(`${token}tampered`, publicKey).valid, false);
+    const expiredToken = issueOfflineSignedToken({ id: 'ord_exp', exp: '2020-01-01T00:00:00Z' }, privateKey);
+    assert.equal(verifyOfflineSignedToken(expiredToken, publicKey).valid, false);
+
+    await activateLicense(token, { publicKeyPem: publicKey });
+    const offlineStatus = await getLicenseStatus({ publicKeyPem: publicKey, forceRemote: true });
+    assert.equal(offlineStatus.active, true);
+    assert.equal(offlineStatus.provider, 'offline');
+    await deactivateLicense();
+
+    // 2. Polar.sh zero-proxy client API
+    const polarRec = await activateLicense('POLAR-KEY-1', { provider: 'polar', polarOrgId: 'org_polar_123', polarBase: mockBase });
+    assert.equal(polarRec.instanceId, 'act_polar_1');
+    const polarStatus = await getLicenseStatus({ provider: 'polar', polarOrgId: 'org_polar_123', polarBase: mockBase, forceRemote: true });
+    assert.equal(polarStatus.active, true);
+    assert.equal(polarStatus.provider, 'polar');
+    await deactivateLicense();
+
+    // 3. Payhip per-product API
+    await activateLicense('PAYHIP-KEY-1', { provider: 'payhip', payhipProductKey: 'payhip_sec_123', payhipBase: mockBase });
+    const payhipStatus = await getLicenseStatus({ provider: 'payhip', payhipProductKey: 'payhip_sec_123', payhipBase: mockBase, forceRemote: true });
+    assert.equal(payhipStatus.active, true);
+    assert.equal(payhipStatus.provider, 'payhip');
+    await deactivateLicense();
+
+    // 4. Gumroad zero-proxy API (and refunded rejection)
+    await activateLicense('GUM-VALID', { provider: 'gumroad', gumroadProductId: 'gum_prod_1', gumroadBase: mockBase });
+    const gumStatus = await getLicenseStatus({ provider: 'gumroad', gumroadProductId: 'gum_prod_1', gumroadBase: mockBase, forceRemote: true });
+    assert.equal(gumStatus.active, true);
+    await assert.rejects(() => activateLicense('GUM-REFUNDED', { provider: 'gumroad', gumroadProductId: 'gum_prod_1', gumroadBase: mockBase }));
+  } finally {
+    server.close();
+    if (prevHome === undefined) delete process.env.TOKENGUARD_HOME;
+    else process.env.TOKENGUARD_HOME = prevHome;
+    await fs.rm(homeDir, { recursive: true, force: true });
   }
 });
