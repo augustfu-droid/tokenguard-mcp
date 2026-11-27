@@ -22,12 +22,12 @@ npx tokenguard-mcp diff --base main
 
 ### VS Code / Cursor / Windsurf Extension (Free `.vsix`)
 
-Prefer live token & USD estimates in your editor status bar plus real-time secret-leak squiggles? Download the zero-dependency `.vsix` from GitHub Releases:
+Prefer live token & USD estimates in your editor status bar plus real-time secret-leak squiggles? Install from the dedicated open-source extension repository ([`augustfu-droid/vscode-tokenguard`](https://github.com/augustfu-droid/vscode-tokenguard)):
 
 ```bash
-curl -LO https://github.com/augustfu-droid/tokenguard-mcp/releases/download/v1.0.1/tokenguard-vscode-1.0.0.vsix
+curl -LO https://github.com/augustfu-droid/vscode-tokenguard/releases/download/v1.0.0/tokenguard-vscode-1.0.0.vsix
 code --install-extension tokenguard-vscode-1.0.0.vsix
-# or in Cursor:
+# or in Cursor / Windsurf:
 cursor --install-extension tokenguard-vscode-1.0.0.vsix
 ```
 
