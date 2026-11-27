@@ -4,6 +4,7 @@
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-green.svg)](./LICENSE)
 [![Node.js >= 20](https://img.shields.io/badge/Node.js-%3E%3D20-blue.svg)](https://nodejs.org)
+[![TokenGuard MCP server – quality and maintenance score on Glama](https://glama.ai/mcp/servers/augustfu-droid/tokenguard-mcp/badges/score.svg)](https://glama.ai/mcp/servers/augustfu-droid/tokenguard-mcp)
 
 ---
 
