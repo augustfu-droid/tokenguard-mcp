@@ -20,6 +20,17 @@ npx tokenguard-mcp pack . --budget 24000 --format xml --out context.xml
 npx tokenguard-mcp diff --base main
 ```
 
+### VS Code / Cursor / Windsurf Extension (Free `.vsix`)
+
+Prefer live token & USD estimates in your editor status bar plus real-time secret-leak squiggles? Download the zero-dependency `.vsix` from GitHub Releases:
+
+```bash
+curl -LO https://github.com/augustfu-droid/tokenguard-mcp/releases/download/v1.0.1/tokenguard-vscode-1.0.0.vsix
+code --install-extension tokenguard-vscode-1.0.0.vsix
+# or in Cursor:
+cursor --install-extension tokenguard-vscode-1.0.0.vsix
+```
+
 ---
 
 ## Use as an MCP Server (Claude Code / Cursor / Windsurf / Antigravity)

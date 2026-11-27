@@ -1,0 +1,20 @@
+{
+  "$schema": "https://static.modelcontextprotocol.io/schemas/2025-10-17/server.schema.json",
+  "name": "io.github.augustfu-droid/tokenguard-mcp",
+  "description": "Zero-dependency CLI & stdio MCP server for repo token audits, context packing, and cost estimates.",
+  "repository": {
+    "url": "https://github.com/augustfu-droid/tokenguard-mcp",
+    "source": "github"
+  },
+  "version": "1.0.1",
+  "packages": [
+    {
+      "registryType": "npm",
+      "identifier": "tokenguard-mcp",
+      "version": "1.0.1",
+      "transport": {
+        "type": "stdio"
+      }
+    }
+  ]
+}
